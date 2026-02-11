@@ -1,0 +1,7 @@
+streamlit
+pymupdf
+python-dotenv
+
+# AI Providers
+groq                    # For Groq API (current setup)
+# google-generativeai   # For Gemini API (future - uncomment when needed)
