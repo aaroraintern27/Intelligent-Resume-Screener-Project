@@ -27,7 +27,7 @@ def _build_resume_context(parsed_resumes: Dict[str, str]) -> str:
     """
     blocks = []
     for rid, text in parsed_resumes.items():
-        # Separator includes a small JSON with identifier as requested
+        # Separator includes a small JSON with identifier
         sep_start = f"===CANDIDATE_START {json.dumps({'id': rid})} ==="
         sep_end = "===CANDIDATE_END==="
         blocks.append(f"{sep_start}\n{text}\n{sep_end}")
@@ -48,8 +48,7 @@ def compose_prompt(parsed_resumes: Dict[str, str], jd_text: str) -> str:
 You are an AI Resume Screening Assistant for HR. Follow these rules:
 - Be objective and grounded: do not assume or invent skills, experiences, or qualifications not explicitly present in the provided resume texts.
 - When you make any claim about a candidate in the strengths/gaps/evidence fields, include a short quoted excerpt that supports the claim.
-- The IDs (R-001, R-002, etc.) are ONLY for internal system tracking. DO NOT mention these IDs in the "jd_fit_summary" field.
-- In the "jd_fit_summary", refer to candidates by their names (if available) or use generic terms like "top candidates", "strongest applicants", "the candidate pool", etc. NEVER use R-001, R-002, etc. in the summary.
+- The IDs (R-001, R-002, etc.) are ONLY for internal system tracking. DO NOT mention these IDs in the "jd_fit_summary", "name", "score_percentage", "is_suitable", "strengths", "gaps", "evidence" field.
 - Output MUST be valid JSON (no extra commentary). Use the schema requested below.
 - Keep answers concise and focused on the job description / query provided.
 """
@@ -60,7 +59,7 @@ Expected JSON output schema:
   "candidates": [
     {
       "id": "<R-XXX>",
-      "name": "Candidate Name (if available in resume)",
+      "name": "Candidate Name (as per the resume)",
       "score_percentage": 85,      # percentage fit score (0-100)
       "is_suitable": true,         # true if score >= 70%, false otherwise
       "strengths": ["..."],        # list of short strings (each with an evidence snippet)
@@ -87,7 +86,7 @@ Expected JSON output schema:
         "===HR_QUERY===",
         hr_query_section,
         "===TASK===",
-        "Analyze the candidates above against the HR Query. Return a JSON object matching the schema exactly. For each strength/gap include a one-line evidence snippet and the candidate id."
+        "Analyze the candidates above against the HR Query. Return a JSON object matching the schema exactly. For each strength/gap include a one-line evidence snippet."
     ])
 
     return prompt
@@ -113,7 +112,7 @@ def _call_groq_api(prompt: str) -> Dict[str, Any]:
                 }
             ],
             temperature=0.3,
-            max_tokens=2048,
+            max_tokens=3072,
             response_format={"type": "json_object"}
         )
         
