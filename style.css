@@ -1,24 +1,216 @@
+/* GLOBAL FIX */
 
-/* Hide Streamlit default uploaded file list */
+/* Push main content below fixed navbar */
+.block-container {
+    padding-top: 22px !important;
+}
+/* Keep main container centered always */
+.block-container {
+    max-width: 1000px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+/* Hide Streamlit heading anchor link icon */
+a[href^="#"] {
+    display: none !important;
+}
+
+/* Keep Streamlit header but make it invisible */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
+/* NAVBAR (FIXED TOP HEADER) */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width, 0px);
+    right: 0;
+    height: 50px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    z-index: 99999 !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+}
+
+
+.nav-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111111;
+    text-align: center;
+    line-height: 1;
+}
+/* MOBILE NAVBAR FIX */
+@media (max-width: 600px) {
+
+    .navbar {
+        height: auto;
+        padding: 10px 12px;
+    }
+
+    .nav-title {
+        font-size: 16px;
+        line-height: 1.3;
+        text-align: center;
+        white-space: normal;
+    }
+}
+
+/* When sidebar is open */
+section[data-testid="stSidebar"][aria-expanded="true"] ~ div .navbar {
+    left: 16rem;   
+}
+
+
+/* Push sidebar below navbar */
+section[data-testid="stSidebar"] {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    background-color: #dbeafe !important;
+    border-right: 1px solid #bfdbfe !important;
+}
+
+/* Remove ALL internal top spacing */
+section[data-testid="stSidebar"] > div {
+    padding: 0.5rem 0.75rem 1rem 0.75rem !important;
+}
+
+/* Kill Streamlit internal block spacing */
+section[data-testid="stSidebar"] .block-container {
+    padding-top: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Remove top spacing before first element */
+section[data-testid="stSidebar"] .element-container:first-child {
+    margin-top: 0 !important;
+}
+
+/* Sidebar text color */
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] label {
+    color: #1e3a8a !important;
+}
+
+/* Reduce spacing below sidebar heading */
+section[data-testid="stSidebar"] h3 {
+    margin-bottom: 5px !important;
+}
+
+/* Remove extra spacing added by Streamlit blocks */
+section[data-testid="stSidebar"] .block-container {
+    padding-top: 0rem !important;
+}
+
+/* Remove uploader top margin */
+section[data-testid="stSidebar"] [data-testid="stFileUploader"] {
+    margin-top: 0px !important;
+}
+
+
+/* FILE UPLOADER CUSTOMIZATION */
+
 [data-testid="stFileUploaderFile"] {
     display: none;
 }
 
-/* Hide pagination text */
 [data-testid="stFileUploaderPagination"] {
     display: none;
 }
 
-/* Reduce default Streamlit top spacing */
-.block-container {
-    padding-top: 2rem;
+[data-testid="stFileUploaderDropzone"] {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+
+    background: white !important;
+    border-radius: 16px !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+    padding: 30px 20px !important;
 }
 
-/* FILE DISPLAY */
+[data-testid="stFileUploaderDropzone"] > div:nth-child(2) {
+    display: none;
+}
+
+[data-testid="stFileUploaderDropzone"]::before {
+    content: "Drop resume here or Click to browse";
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e3a8a;
+    margin-bottom: 6px;
+}
+
+[data-testid="stFileUploaderDropzone"]::after {
+    content: "PDF files only (Max 20MB)";
+    font-size: 12px;
+    color: #475569;
+    margin-top: 10px;
+}
+
+[data-testid="stFileUploaderDropzone"] div:has(button) {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100%;
+}
+
+[data-testid="stFileUploaderDropzone"] button {
+    margin: 0 auto !important;
+}
+/* Hide original button text */
+[data-testid="stFileUploaderDropzone"] button {
+    font-size: 0 !important;
+    background-color: #ffffff;
+    border: 1px solid #d1d5db;
+    padding: 10px 22px;
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+/* Add custom text */
+[data-testid="stFileUploaderDropzone"] button::after {
+    content: "Choose File";
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e3a8a;
+}
+
+/* Hover effect */
+[data-testid="stFileUploaderDropzone"] button:hover {
+    background-color: #f3f4f6;
+    border-color: #1e3a8a;
+}
+
+
+[data-testid="stFileUploaderDropzone"] small {
+    width: 100% !important;
+    text-align: center !important;
+    display: block !important;
+}
+
+
+/* FILE LIST DISPLAY */
+
 .file-name {
     font-size: 13px;
     font-weight: 500;
-    color: var(--text-color);
+    color: #1e3a8a;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -26,104 +218,194 @@
 
 .file-size {
     font-size: 11px;
-    color: color-mix(in srgb, var(--text-color) 60%, transparent);
+    color: #1e40af;
 }
 
-/* BRAND HEADER */
 
-.brand-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    margin-bottom: 24px;
-}
+/* HERO SECTION */
 
-.brand-logo {
-    font-size: 40px;
-}
-
-.brand-title {
-    margin: 0;
-    font-weight: 700;
-    color: var(--primary-color);
-}
-
-/* INFO SECTION */
-
-.info-container {
+.hero-container {
     text-align: center;
-    max-width: 700px;
-    margin: 0 auto 16px auto;
+    padding: 20px 40px;
 }
 
-.info-text {
-    font-size: 15px;
-    color: var(--text-color);
-    line-height: 1.6;
-    margin-bottom: 12px;
-}
-
-.info-list {
-    list-style-type: disc;
-    text-align: left;
+.ai-pill {
     display: inline-block;
-    font-size: 14px;
-    color: var(--text-color);
-    padding-left: 20px;
+    background: #e6f0ff;
+    color: #2563eb;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    margin-bottom: 15px;
 }
 
-.info-list li {
-    margin-bottom: 6px;
+.hero-title {
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: 15px;
 }
 
-/* JD INPUT */
-
-.jd-container {
-    max-width: 720px;
-    margin: -8px auto 28px auto;
+.hero-subtitle {
+    font-size: 17px;
+    color: #555;
+    max-width: 750px;
+    margin: 0 auto 10px auto;
 }
 
-/* Hide "Press Ctrl+Enter" hint */
-.jd-container div[data-testid="stTextArea"] small,
-.jd-container div[data-testid="stTextArea"] div[role="note"],
-.jd-container div[data-testid="stTextArea"] [class*="hint"],
-.jd-container div[data-testid="stTextArea"] [class*="instruction"] {
-    display: none !important;
-}
 
-/* FINAL SUBMIT BUTTON */
-.final-btn-row {
+/* JOB DESCRIPTION SECTION */
+
+.jd-wrapper {
     display: flex;
-    justify-content: flex-end;
-    margin-top: 16px;
+    justify-content: center;
+    margin-top: 0px;
 }
 
-/* Active button */
-.final-btn-row [data-testid="stButton"] button {
-    background-color: var(--primary-color) ;
-    color: var(--background-color) ;
-    border-radius: 8px ;
-    border: none ;
-    padding: 6px 18px ;
-    font-size: 13px ;
-    font-weight: 600 ;
-    min-width: 140px;
+.jd-inner label {
+    font-weight: 600 !important;
+    font-size: 15px !important;
+}
+.jd-inner {
+    width: 70%;
+    margin: 0 auto;
+}
+
+
+.jd-inner textarea {
+    width: 100% !important;
+    border-radius: 14px !important;
+    padding: 16px !important;
+    font-size: 14px !important;
+    border: 1px solid #d1d5db !important;
+}
+
+/* FORCE OVERRIDE ALL STREAMLIT PRIMARY BUTTONS */
+
+div[data-testid="stButton"] button[kind="primary"] {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 10px 16px !important;
+    font-weight: 600 !important;
+    transition: all 0.25s ease !important;
+    cursor: pointer !important;
 }
 
 /* Hover */
-.final-btn-row [data-testid="stButton"] button:hover:enabled {
-    filter: brightness(0.9);
+div[data-testid="stButton"] button[kind="primary"]:hover {
+    background-color: #1a1a1a !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* Disabled */
-.final-btn-row [data-testid="stButton"] button:disabled {
-    background-color: color-mix(
-        in srgb,
-        var(--primary-color) 80%,
-        var(--background-color)
-    ) ;
-    color: var(--background-color) ;
-    opacity: 0.6 ;
-    cursor: not-allowed ;
+
+/* FOOTER */
+
+.footer {
+    text-align: center;
+    padding: -10px;
+    margin-top: 80px;
+    border-top: 1px solid #e5e7eb;
+}
+
+
+section[data-testid="stSidebar"] [data-testid="stFileUploader"] {
+    margin-top: -28px !important;
+}
+/* FORCE STYLE STREAMLIT TOAST */
+
+/* Toast container */
+div[data-testid="stToastContainer"] {
+    z-index: 999999 !important;
+}
+
+/* Actual toast card */
+div[data-testid="stToastContainer"] > div {
+    background-color: #dbeafe !important;   /* Light Blue */
+    color: #1e3a8a !important;
+    border: 1px solid #bfdbfe !important;
+    border-radius: 12px !important;
+}
+
+/* Text inside toast */
+div[data-testid="stToastContainer"] p {
+    color: #1e3a8a !important;
+}
+
+/* Close button */
+div[data-testid="stToastContainer"] button {
+    color: #1e3a8a !important;
+}
+/* Keep header visible */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
+/* Hide Deploy button safely */
+button[kind="header"] {
+    visibility: hidden !important;
+}
+/* Force sidebar content to stick to top */
+section[data-testid="stSidebar"] > div {
+    padding-top: 0 !important;
+    margin-top: -20px !important;
+}
+/* Center "No files uploaded yet" text */
+[data-testid="stSidebar"] .stAlert {
+    text-align: center !important;
+}
+.file-icon {
+    font-size: 20px;
+    color: #2563eb;
+}
+.file-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+/* DISABLED PRIMARY BUTTON */
+div[data-testid="stButton"] button[kind="primary"]:disabled {
+    background-color: #d1d5db !important;  /* grey */
+    color: #6b7280 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* Remove hover when disabled */
+div[data-testid="stButton"] button[kind="primary"]:disabled:hover {
+    background-color: #d1d5db !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+/* RESET BUTTON — TEXT STYLE */
+
+div[data-testid="stButton"] button[kind="secondary"] {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    padding: 10px 14px !important;
+
+    color: #111111 !important;
+    text-decoration: none !important;
+}
+
+/* Hover */
+div[data-testid="stButton"] button[kind="secondary"]:hover {
+    background: transparent !important;
+    text-decoration: none !important;   /* remove underline */
+    cursor: pointer !important;
+}
+
+/* When clicked */
+div[data-testid="stButton"] button[kind="secondary"]:focus,
+div[data-testid="stButton"] button[kind="secondary"]:active {
+    outline: none !important;
+    box-shadow: none !important;
+    text-decoration: none !important;   
 }
