@@ -24,7 +24,7 @@ header[data-testid="stHeader"] {
 .navbar {
     position: fixed;
     top: 0;
-    left: var(--sidebar-width, 0px);
+    left:  0px;
     right: 0;
     height: 50px;
     background: #ffffff;
@@ -45,7 +45,15 @@ header[data-testid="stHeader"] {
     color: #111111;
     text-align: center;
     line-height: 1;
+
+    transition: all 0.3s ease; 
 }
+/* When sidebar opens, shift only title */
+section[data-testid="stSidebar"][aria-expanded="true"] 
+~ div .navbar .nav-title {
+    margin-left: var(--sidebar-width, 16rem);   /* Sidebar width */
+}
+
 /* MOBILE NAVBAR FIX */
 @media (max-width: 600px) {
 
@@ -62,10 +70,7 @@ header[data-testid="stHeader"] {
     }
 }
 
-/* When sidebar is open */
-section[data-testid="stSidebar"][aria-expanded="true"] ~ div .navbar {
-    left: 16rem;   
-}
+
 
 
 /* Push sidebar below navbar */
@@ -81,12 +86,6 @@ section[data-testid="stSidebar"] > div {
     padding: 0.5rem 0.75rem 1rem 0.75rem !important;
 }
 
-/* Kill Streamlit internal block spacing */
-section[data-testid="stSidebar"] .block-container {
-    padding-top: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-}
 
 /* Remove top spacing before first element */
 section[data-testid="stSidebar"] .element-container:first-child {
@@ -109,7 +108,7 @@ section[data-testid="stSidebar"] h3 {
 }
 
 /* Remove extra spacing added by Streamlit blocks */
-section[data-testid="stSidebar"] .block-container {
+/*section[data-testid="stSidebar"] .block-container {
     padding-top: 0rem !important;
 }
 
@@ -349,7 +348,7 @@ button[kind="header"] {
 /* Force sidebar content to stick to top */
 section[data-testid="stSidebar"] > div {
     padding-top: 0 !important;
-    margin-top: -20px !important;
+    margin-top: 3px !important;
 }
 /* Center "No files uploaded yet" text */
 [data-testid="stSidebar"] .stAlert {
