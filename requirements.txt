@@ -1,7 +1,10 @@
-streamlit
-pymupdf
-python-dotenv
+# Core Dependencies
+streamlit>=1.28.0
+pymupdf>=1.23.0
+python-dotenv>=1.0.0
+google-generativeai>=0.3.0
 
-# AI Providers
-groq                    # For Groq API (current setup)
-# google-generativeai   # For Gemini API (future - uncomment when needed)
+# Required for PDF processing
+Pillow>=10.0.0
+
+# Note: This application requires Python 3.8 or higher

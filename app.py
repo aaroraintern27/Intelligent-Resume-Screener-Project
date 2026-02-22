@@ -3,7 +3,8 @@ from resume_parser import extract_text_from_pdf_bytes_parallel
 from ai_service import compose_prompt, get_gemini_response, format_response_to_text
 from config import MAX_RESUMES
 import streamlit.components.v1 as components
-import hashlib  
+import hashlib
+import base64
 
 def get_files_signature(files):
     file_hashes = []
@@ -191,7 +192,7 @@ with st.sidebar:
                 )
 
             with col2:
-                if st.button("🗑", key=f"delete_{file.name}", use_container_width=True):
+                if st.button("\uf5de", key=f"delete_{file.name}", use_container_width=True):
                     file_to_delete = file.name
 
         # DELETE FILE (WITH RERUN)
@@ -211,7 +212,7 @@ with st.sidebar:
         
         # Warning if too many files
         if total_files > MAX_RESUMES:
-            st.warning(f"⚠️ You uploaded {total_files} files. For best results with the current model (openai/gpt-oss-20b), use max {MAX_RESUMES} resumes.")
+            st.warning(f"⚠️ You uploaded {total_files} files. For best results, use max {MAX_RESUMES} resumes per run.")
 
     else:
         st.info("No files uploaded yet")
@@ -312,6 +313,177 @@ def render_footer():
     )
 
 
+# ============================================================================
+# RESULTS RENDERING
+# ============================================================================
+
+def _render_candidate_card(candidate: dict, resume_files_map: dict) -> None:
+    """Render a single candidate card: HTML content + inline PDF download button."""
+    candidate_id  = candidate.get("id")
+    rank_num      = candidate.get("_rank", "?")
+    name          = candidate.get("name", "Unknown")
+    score         = candidate.get("score_percentage", 0)
+    is_suitable   = candidate.get("is_suitable", False)
+    strengths     = candidate.get("strengths", [])
+    gaps          = candidate.get("gaps", [])
+    evidence      = candidate.get("evidence", [])
+
+    status_text = "Suitable for role" if is_suitable else "Not Suitable for role"
+    status_icon = "✅" if is_suitable else "❌"
+
+    # ── Rank label ────────────────────────────────────────────────────
+    st.markdown(
+        f'<div class="cand-rank">🏆 Rank #{rank_num}</div>',
+        unsafe_allow_html=True
+    )
+
+    # ── Name row + PDF download button ────────────────────────────────
+    col_name, col_dl = st.columns([9, 1])
+    with col_name:
+        st.markdown(
+            f'<div class="cand-name-row">Candidate : <strong>{name}</strong></div>',
+            unsafe_allow_html=True
+        )
+    with col_dl:
+        if candidate_id and candidate_id in resume_files_map:
+            orig = resume_files_map[candidate_id]
+            b64 = base64.b64encode(orig.getvalue()).decode()
+            st.markdown(
+                f'<a class="cand-dl-link" '
+                f'href="data:application/pdf;base64,{b64}" '
+                f'download="{orig.name}" '
+                f'title="Download {name}\'s resume PDF">'
+                f'<i class="bi bi-download"></i>'
+                f'</a>',
+                unsafe_allow_html=True
+            )
+
+    # ── Score / Status / Strengths / Gaps / Evidence ──────────────────
+    strengths_html = "".join(f"<li>{s}</li>" for s in strengths)
+    gaps_html      = "".join(f"<li>{g}</li>" for g in gaps)
+    evidence_html  = "".join(f"<li><em>{e}</em></li>" for e in evidence[:3])
+
+    body_html = f"""
+    <div class="cand-body">
+        <div class="cand-row">Match Score : <strong>{score}%</strong></div>
+        <div class="cand-row">Status : {status_text} {status_icon}</div>
+    """
+    if strengths:
+        body_html += f'<div class="cand-section-title">Key Strengths:</div><ul class="cand-list">{strengths_html}</ul>'
+    if gaps:
+        body_html += f'<div class="cand-section-title">Areas of Concern:</div><ul class="cand-list">{gaps_html}</ul>'
+    if evidence:
+        body_html += f'<div class="cand-section-title">Supporting Evidence:</div><ul class="cand-list evidence-list">{evidence_html}</ul>'
+    body_html += '</div><hr class="cand-divider">'
+
+    st.markdown(body_html, unsafe_allow_html=True)
+
+
+def render_analysis_report(result: dict, resume_files_map: dict) -> None:
+    """Render the full analysis report: header, summary, tabbed candidate cards."""
+    candidates   = result.get("candidates", [])
+    ranking      = result.get("ranking", [])
+    role_type    = result.get("role_type", "").lower()
+    jd_summary   = result.get("jd_fit_summary", "")
+
+    # Build globally ranked list
+    candidate_map     = {c.get("id"): c for c in candidates}
+    ranked_candidates = [candidate_map[cid] for cid in ranking if cid in candidate_map]
+    for c in candidates:
+        if c not in ranked_candidates:
+            ranked_candidates.append(c)
+    for i, c in enumerate(ranked_candidates):
+        c["_rank"] = i + 1
+
+    # Split candidates by suitability (needed for summary counts AND tabs)
+    suitable_candidates = [c for c in ranked_candidates if c.get("is_suitable", False)]
+    not_suitable_candidates = [c for c in ranked_candidates if not c.get("is_suitable", False)]
+
+    # Generate txt variants for downloads
+    txt_all     = format_response_to_text(result, "all")
+    txt_suit    = format_response_to_text(result, "suitable")
+    txt_notsuit = format_response_to_text(result, "not_suitable")
+
+    # ── Header: title + download popover ──────────────────────────────
+    col_title, col_dl = st.columns([7, 1])
+    with col_title:
+        st.markdown(
+            '<h2 class="report-main-title">Resume Screening Analysis Report</h2>',
+            unsafe_allow_html=True
+        )
+    with col_dl:
+        # Custom HTML popover using details/summary to avoid Streamlit's "expand_more" text
+        popover_html = f"""
+        <details class="report-dl-popover">
+            <summary class="report-dl-trigger">
+                <i class="bi bi-download"></i>
+            </summary>
+            <div class="report-dl-menu">
+                <a href="data:text/plain;base64,{base64.b64encode(txt_all.encode()).decode()}" 
+                   download="report_overall.txt" class="report-dl-item">Overall</a>
+                <a href="data:text/plain;base64,{base64.b64encode(txt_suit.encode()).decode()}" 
+                   download="report_suitable.txt" class="report-dl-item">Suitable Role</a>
+                <a href="data:text/plain;base64,{base64.b64encode(txt_notsuit.encode()).decode()}" 
+                   download="report_not_suitable.txt" class="report-dl-item">Not Suitable Role</a>
+            </div>
+        </details>
+        """
+        st.markdown(popover_html, unsafe_allow_html=True)
+
+    # ── Overall Summary ───────────────────────────────────────────────
+    total_candidates = len(candidates)
+    suitable_count = len(suitable_candidates)
+    not_suitable_count = len(not_suitable_candidates)
+    
+    st.markdown(
+        '<div class="report-section-header">'
+        '<span class="section-icon">📄</span>'
+        '<span class="section-heading">Overall Summary</span>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    
+    # Build summary with counts + brief context
+    summary_html = f"""
+    <p class="summary-text">
+        <strong>{suitable_count} candidate(s) suitable</strong> and 
+        <strong>{not_suitable_count} not suitable</strong> out of {total_candidates} total. 
+        {jd_summary}
+    </p>
+    """
+    st.markdown(summary_html, unsafe_allow_html=True)
+
+    st.markdown('<div style="height:20px;"></div>', unsafe_allow_html=True)
+
+    # ── Detailed Candidate Analysis ───────────────────────────────────
+    st.markdown(
+        '<div class="report-section-header">'
+        '<span class="section-icon">📄</span>'
+        '<span class="section-heading">Detailed Candidate Analysis</span>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    tab1, tab2 = st.tabs([
+        f"Suitable Profiles ({len(suitable_candidates)})",
+        f"Not Suitable Profiles ({len(not_suitable_candidates)})"
+    ])
+
+    with tab1:
+        if suitable_candidates:
+            for c in suitable_candidates:
+                _render_candidate_card(c, resume_files_map)
+        else:
+            st.info("No suitable candidates found for this role.")
+
+    with tab2:
+        if not_suitable_candidates:
+            for c in not_suitable_candidates:
+                _render_candidate_card(c, resume_files_map)
+        else:
+            st.success("All candidates are suitable for this role!")
+
+
 # MAIN PAGE
 render_top_header()
 
@@ -329,6 +501,8 @@ with st.container():
 
     
     if analyze_clicked:
+        # Create anchor point for auto-scroll
+        st.markdown('<div id="analysis-section"></div>', unsafe_allow_html=True)
         progress_placeholder = st.empty()
 
         if not has_files:
@@ -358,6 +532,20 @@ with st.container():
 
             try:
                 progress_placeholder.info("⏳ Parsing the resumes...")
+                
+                # Auto-scroll to analysis section
+                components.html(
+                    """
+                    <script>
+                        const element = window.parent.document.getElementById('analysis-section');
+                        if (element) {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    </script>
+                    """,
+                    height=0
+                )
+                
                 pdf_bytes_list = [f.getvalue() for f in st.session_state.uploaded_files]
 
             
@@ -398,51 +586,10 @@ with st.container():
 
     # Display results if available
     if st.session_state.process_result:
-        st.markdown("---")
-        st.subheader("📊 Analysis Result")
-        
-        # Show formatted text
-        if st.session_state.formatted_text:
-            st.text(st.session_state.formatted_text)
-        
-        # Add download section for suitable candidates
-        if st.session_state.process_result.get("candidates"):
-            st.markdown("---")
-            st.subheader("📥 Download Suitable Candidate Resumes")
-            
-            suitable_candidates = [
-                c for c in st.session_state.process_result["candidates"]
-                if c.get("is_suitable", False)
-            ]
-            
-            if suitable_candidates:
-                st.write(f"Found {len(suitable_candidates)} suitable candidate(s)")
-                
-                # Create columns for download buttons
-                cols = st.columns(min(len(suitable_candidates), 3))
-                
-                for idx, candidate in enumerate(suitable_candidates):
-                    candidate_id = candidate.get("id")  # R-001 (internal use only)
-                    candidate_name = candidate.get("name", "Unknown Candidate")
-                    score = candidate.get("score_percentage", 0)
-                    
-                    col_idx = idx % 3
-                    with cols[col_idx]:
-                        # Get the original file for this candidate using internal ID
-                        if candidate_id in st.session_state.resume_files_map:
-                            original_file = st.session_state.resume_files_map[candidate_id]
-                            
-                            # Download button shows name and score (no R-001 ID)
-                            st.download_button(
-                                label=f"📄 {candidate_name}\nMatch: {score}%",
-                                data=original_file.getvalue(),
-                                file_name=original_file.name,  # Keep original filename
-                                mime="application/pdf",
-                                key=f"download_{candidate_id}",
-                                use_container_width=True
-                            )
-            else:
-                st.info("No suitable candidates found (score >= 70%)")
+        render_analysis_report(
+            st.session_state.process_result,
+            st.session_state.resume_files_map
+        )
 
     render_footer()   
 

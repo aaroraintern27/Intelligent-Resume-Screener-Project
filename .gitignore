@@ -1,35 +1,21 @@
-# Environment variables (contains API keys)
+# Environment variables (contains API keys) - CRITICAL
 .env
 
-# Python
+# Python cache
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+*.pyc
+
+# Virtual environments
 venv/
 env/
-ENV/
-.venv
 
-# Streamlit
+# Streamlit cache
 .streamlit/
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.bak
-*.cache

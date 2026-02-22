@@ -378,6 +378,269 @@ div[data-testid="stButton"] button[kind="primary"]:disabled:hover {
     transform: none !important;
     box-shadow: none !important;
 }
+/* ============================================================
+   ANALYSIS REPORT — LAYOUT & CARDS
+   ============================================================ */
+
+/* Report main title */
+.report-main-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e40af;
+    margin: 0 0 6px 0;
+    padding: 0;
+    line-height: 1.3;
+}
+
+/* Role type badge */
+.role-badge {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 4px 0 14px 0;
+}
+.fresher-badge {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+.midsenior-badge {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+}
+
+/* Section header (icon + heading) */
+.report-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+}
+.section-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+.section-heading {
+    font-size: 17px;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* Overall summary text */
+.summary-text {
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.65;
+    margin: 0;
+}
+
+/* Candidate card elements */
+.cand-rank {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    margin: 16px 0 2px 0;
+}
+.cand-name-row {
+    font-size: 14px;
+    color: #111827;
+    padding: 4px 0 2px 0;
+    line-height: 1.4;
+}
+.cand-body {
+    font-size: 14px;
+    color: #374151;
+    margin-top: 4px;
+}
+.cand-row {
+    margin: 3px 0;
+    font-size: 14px;
+}
+.cand-section-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #111827;
+    margin: 10px 0 3px 0;
+}
+.cand-list {
+    margin: 0 0 4px 18px;
+    padding: 0;
+}
+.cand-list li {
+    font-size: 13.5px;
+    color: #374151;
+    margin-bottom: 3px;
+    line-height: 1.5;
+}
+.evidence-list li {
+    color: #6b7280;
+    font-style: italic;
+}
+.cand-divider {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 14px 0 2px 0;
+}
+
+/* Candidate PDF download link — Bootstrap Icon <a> tag */
+.cand-dl-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    color: #374151;
+    text-decoration: none !important;
+    font-size: 15px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    margin-top: 4px;
+}
+.cand-dl-link:hover {
+    background: #f3f4f6;
+    border-color: #6b7280;
+    color: #111827;
+}
+
+/* ============================================================
+   CUSTOM REPORT DOWNLOAD POPOVER (HTML details/summary)
+   ============================================================ */
+
+.report-dl-popover {
+    position: relative;
+    display: inline-block;
+}
+
+.report-dl-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    list-style: none;
+}
+
+.report-dl-trigger::-webkit-details-marker,
+.report-dl-trigger::marker {
+    display: none;
+}
+
+.report-dl-trigger:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.report-dl-popover[open] .report-dl-trigger {
+    background: #f3f4f6;
+    border-color: #6b7280;
+}
+
+.report-dl-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 180px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 4px;
+    z-index: 1000;
+}
+
+.report-dl-item {
+    display: block;
+    padding: 8px 12px;
+    color: #374151;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.report-dl-item:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+/* Bootstrap Icons font for sidebar delete buttons.
+   Streamlit wraps label text in a nested <p> — we must target button AND
+   all descendants. */
+section[data-testid="stSidebar"] div[data-testid="stButton"] button,
+section[data-testid="stSidebar"] div[data-testid="stButton"] button * {
+    font-family: 'bootstrap-icons' !important;
+    font-size: 16px !important;
+    line-height: 1 !important;
+}
+
+/* ============================================================
+   TAB STYLING — iOS-style segmented control
+   ============================================================ */
+
+/* Main tab container */
+.stTabs {
+    margin-top: 15px;
+}
+
+/* Tab list wrapper — grey rounded background container */
+.stTabs [data-baseweb="tab-list"] {
+    background-color: #f3f4f6 !important;
+    border-radius: 8px !important;
+    padding: 4px !important;
+    gap: 0px !important;
+    border-bottom: none !important;
+    display: flex !important;
+    width: 100% !important;
+}
+
+/* Individual tab button */
+.stTabs [data-baseweb="tab"] {
+    flex: 1 !important;
+    text-align: center !important;
+    justify-content: center !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 8px 0 !important;
+    color: #4b5563 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 6px !important;
+    transition: all 0.2s ease-in-out !important;
+    margin: 0 !important;
+}
+
+/* Hover effect for inactive tabs */
+.stTabs [data-baseweb="tab"]:hover {
+    color: #2563eb !important;
+}
+
+/* Active tab — white card floating inside grey container */
+.stTabs [aria-selected="true"] {
+    background-color: #ffffff !important;
+    color: #2563eb !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    border-bottom: none !important;
+}
+
+/* Remove default Streamlit blue highlight bar */
+.stTabs [data-baseweb="tab-highlight"] {
+    display: none !important;
+}
+
+
 /* RESET BUTTON — TEXT STYLE */
 
 div[data-testid="stButton"] button[kind="secondary"] {

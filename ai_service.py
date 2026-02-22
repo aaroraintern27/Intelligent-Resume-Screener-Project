@@ -2,18 +2,13 @@
 AI Service Module
 Handles AI-related business logic:
 - Prompt composition (three-layer design)
-- AI model client calls (Groq/Gemini)
+- Gemini 2.5 Flash API calls
 """
 
 import json
+import re
 from typing import Dict, Any
-from config import (
-    AI_PROVIDER,
-    GROQ_API_KEY,
-    GROQ_MODEL,
-    GEMINI_API_KEY,
-    GEMINI_MODEL
-)
+from config import GEMINI_API_KEY, GEMINI_MODEL
 
 
 # ============================================================================
@@ -27,7 +22,6 @@ def _build_resume_context(parsed_resumes: Dict[str, str]) -> str:
     """
     blocks = []
     for rid, text in parsed_resumes.items():
-        # Separator includes a small JSON with identifier
         sep_start = f"===CANDIDATE_START {json.dumps({'id': rid})} ==="
         sep_end = "===CANDIDATE_END==="
         blocks.append(f"{sep_start}\n{text}\n{sep_end}")
@@ -53,32 +47,71 @@ You are an AI Resume Screening Assistant for HR. Follow these rules:
 - Keep answers concise and focused on the job description / query provided.
 """
 
+    scoring_weightage_instructions = """
+===ROLE CLASSIFICATION & SCORING WEIGHTAGE===
+
+Before scoring, classify the role from the HR Query / Job Description as either "fresher" or "mid_senior".
+
+CLASSIFICATION RULES:
+- "fresher": Role targets fresh graduates, entry-level candidates, 0-2 years of experience, internship roles, trainee or junior positions, or roles where no prior work experience is required.
+- "mid_senior/any experienced professional": Role requires 2+ years of work experience, specific domain skills, senior/lead/manager titles, or expects proven professional track record.
+- If the JD is ambiguous or does not specify, default to "mid_senior".
+
+SCORING WEIGHTAGE (apply this when computing score_percentage for each candidate):
+
+  For FRESHER roles:
+    - Education (degree, institution, GPA, relevant coursework):  80%
+    - Projects & Internships (personal/academic projects, any internships): 20%
+
+  For MID-SENIOR roles:
+    - Skills (technical + domain skills matching the JD):          50%
+    - Work Experience (years, relevance, seniority of past roles): 45%
+    - Location (proximity or match to job location if specified):   5%
+
+IMPORTANT:
+- Score each candidate strictly using these weights. A candidate weak in a high-weight category cannot compensate with a strong low-weight category.
+- In the "strengths" and "gaps" fields, explicitly mention whether the strength/gap is in a high-weight or low-weight category so the HR team understands its impact on the score.
+- The "role_type" field in the output must reflect your classification: either "fresher" or "mid_senior".
+"""
+
     schema_instructions = """
 Expected JSON output schema:
 {
+  "role_type": "fresher" | "mid_senior",
   "candidates": [
     {
       "id": "<R-XXX>",
       "name": "Candidate Name (as per the resume)",
-      "score_percentage": 85,      # percentage fit score (0-100)
-      "is_suitable": true,         # true if score >= 70%, false otherwise
-      "strengths": ["..."],        # list of short strings (each with an evidence snippet)
-      "gaps": ["..."],             # list of short strings (each with an evidence snippet)
-      "evidence": ["..."]          # list of quoted excerpts from the resume supporting the score
+      "score_percentage": 85,
+      "is_suitable": true,
+      "strengths": ["..."],
+      "gaps": ["..."],
+      "evidence": ["..."]
     }
-  ],
-  "ranking": ["R-002","R-001"],    # array of candidate ids ordered best->worst (highest score first)
-  "jd_fit_summary": "..."          # OVERALL summary for ALL candidates combined (2-4 sentences). Use candidate NAMES or generic terms (e.g., "the top candidates", "strongest applicants"). NEVER use IDs like R-001, R-002 in this summary.
+   ],
+  "ranking": ["R-002","R-001"],
+  "jd_fit_summary": "..."
 }
+
+CRITICAL INSTRUCTION FOR "jd_fit_summary":
+- Keep it EXTREMELY brief: 1-2 sentences maximum.
+- Focus ONLY on the overall candidate pool quality and key gaps/strengths common across ALL candidates.
+- DO NOT mention individual candidate names or IDs (R-001, R-002, etc.).
+- Example: "Most candidates demonstrate strong technical backgrounds but lack the required 5+ years of leadership experience. The candidate pool shows solid project management skills but limited exposure to cloud technologies."
 """
 
     resume_context = _build_resume_context(parsed_resumes)
 
-    hr_query_section = f"HR Query / Job Description:\n{jd_text.strip()}\n" if jd_text and jd_text.strip() else "HR Query / Job Description:\n\n"
+    hr_query_section = (
+        f"HR Query / Job Description:\n{jd_text.strip()}\n"
+        if jd_text and jd_text.strip()
+        else "HR Query / Job Description:\n\n"
+    )
 
     prompt = "\n\n".join([
         "===SYSTEM_INSTRUCTIONS===",
         system_instructions,
+        scoring_weightage_instructions,
         "===OUTPUT_SCHEMA===",
         schema_instructions,
         "===RESUME_CONTEXT===",
@@ -86,193 +119,185 @@ Expected JSON output schema:
         "===HR_QUERY===",
         hr_query_section,
         "===TASK===",
-        "Analyze the candidates above against the HR Query. Return a JSON object matching the schema exactly. For each strength/gap include a one-line evidence snippet."
+        (
+            "Step 1: Read the HR Query and classify the role as 'fresher' or 'mid_senior' using the classification rules above. "
+            "Step 2: Apply the corresponding scoring weightage to evaluate each candidate. "
+            "Step 3: Return a single JSON object matching the schema exactly. "
+            "For each strength/gap include a one-line evidence snippet and note whether it is in a high-weight or low-weight category."
+        )
     ])
 
     return prompt
 
 
 # ============================================================================
-# AI CLIENT (Groq / Gemini)
+# GEMINI API CLIENT
 # ============================================================================
 
-def _call_groq_api(prompt: str) -> Dict[str, Any]:
-    """Call Groq API using the Groq Python SDK."""
-    try:
-        from groq import Groq
-        
-        client = Groq(api_key=GROQ_API_KEY)
-        
-        completion = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.3,
-            max_tokens=3072,
-            response_format={"type": "json_object"}
-        )
-        
-        response_text = completion.choices[0].message.content
-        return json.loads(response_text)
-        
-    except Exception as e:
-        raise Exception(f"Groq API error: {str(e)}")
-
-
 def _call_gemini_api(prompt: str) -> Dict[str, Any]:
-    """Call Gemini API (placeholder for future implementation)."""
+    """Call Gemini 2.5 Flash API and return parsed JSON response."""
     try:
         import google.generativeai as genai
-        
+
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        
+
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL,
+            generation_config=genai.GenerationConfig(
+                temperature=0.3,
+                response_mime_type="application/json",
+            )
+        )
+
         response = model.generate_content(prompt)
-        return json.loads(response.text)
-        
+        response_text = response.text.strip()
+
+        # Strip markdown code fences if the model wraps output in them
+        if response_text.startswith("```"):
+            response_text = re.sub(r"^```(?:json)?\s*", "", response_text)
+            response_text = re.sub(r"\s*```$", "", response_text).strip()
+
+        return json.loads(response_text)
+
     except Exception as e:
         raise Exception(f"Gemini API error: {str(e)}")
 
 
-def get_ai_response(prompt: str, parsed_resumes: Dict[str, str]) -> Dict[str, Any]:
+def get_gemini_response(prompt: str, parsed_resumes: Dict[str, str]) -> Dict[str, Any]:
     """
-    Sends the composed prompt to the configured AI provider (Groq or Gemini).
-    
+    Send the composed prompt to Gemini 2.5 Flash and return the structured response.
+
     Args:
         prompt: The structured prompt to send
-        parsed_resumes: The parsed resume data (not used but kept for backward compatibility)
-    
+        parsed_resumes: The parsed resume data (kept for interface consistency)
+
     Returns:
         Dict containing structured JSON response with candidates, ranking, etc.
-    
+
     Raises:
-        ValueError: If no API key is configured for the selected provider
-        Exception: If API call fails
+        ValueError: If GEMINI_API_KEY is not set
+        Exception: If the API call fails
     """
-    # Route to appropriate provider
-    if AI_PROVIDER == "groq":
-        if not GROQ_API_KEY:
-            raise ValueError(
-                "GROQ_API_KEY not configured. Please set it in your .env file.\n"
-                "Get your API key from: https://console.groq.com"
-            )
-        return _call_groq_api(prompt)
-    
-    elif AI_PROVIDER == "gemini":
-        if not GEMINI_API_KEY:
-            raise ValueError(
-                "GEMINI_API_KEY not configured. Please set it in your .env file."
-            )
-        return _call_gemini_api(prompt)
-    
-    else:
+    if not GEMINI_API_KEY:
         raise ValueError(
-            f"Unknown AI provider: '{AI_PROVIDER}'. "
-            "Valid options are: 'groq' or 'gemini'"
+            "GEMINI_API_KEY is not set. Add it to your .env file.\n"
+            "Get your key at: https://aistudio.google.com/app/apikey"
         )
+    return _call_gemini_api(prompt)
 
 
-def format_response_to_text(json_response: Dict[str, Any]) -> str:
+# ============================================================================
+# RESPONSE FORMATTER
+# ============================================================================
+
+def format_response_to_text(json_response: Dict[str, Any], filter_type: str = "all") -> str:
     """
-    Convert JSON response from AI model to human-readable text format.
-    Internal IDs (R-001, R-002, etc.) are hidden from users.
-    
+    Convert the JSON response into a clean plain-text report for download.
+    Internal IDs (R-001, R-002, etc.) are never shown to the user.
+
     Args:
-        json_response: The structured JSON response from the AI model
-    
-    Returns:
-        Formatted string with all analysis details (no internal IDs shown)
+        json_response: Structured JSON from the AI model.
+        filter_type:   "all"          → full report (default)
+                       "suitable"     → suitable candidates only
+                       "not_suitable" → not-suitable candidates only
     """
     if not json_response or "candidates" not in json_response:
         return "No analysis results available."
-    
+
     output_lines = []
-    
-    # Header
+
     output_lines.append("=" * 80)
     output_lines.append("RESUME SCREENING ANALYSIS REPORT")
+    if filter_type == "suitable":
+        output_lines.append("[ SUITABLE CANDIDATES ONLY ]")
+    elif filter_type == "not_suitable":
+        output_lines.append("[ NOT SUITABLE CANDIDATES ONLY ]")
     output_lines.append("=" * 80)
     output_lines.append("")
-    
-    # Overall Summary (for all candidates)
-    if "jd_fit_summary" in json_response:
-        output_lines.append("📋 OVERALL SUMMARY")
+
+    # Role type & weightage
+    role_type = json_response.get("role_type", "").lower()
+    if role_type == "fresher":
+        output_lines.append("ROLE TYPE : FRESHER")
+        output_lines.append("Scoring Weightage:")
+        output_lines.append("  Education               -> 80%  (high priority)")
+        output_lines.append("  Projects & Internships  -> 20%")
+        output_lines.append("")
+    elif role_type == "mid_senior":
+        output_lines.append("ROLE TYPE : MID / SENIOR")
+        output_lines.append("Scoring Weightage:")
+        output_lines.append("  Skills                  -> 50%  (high priority)")
+        output_lines.append("  Work Experience         -> 45%  (high priority)")
+        output_lines.append("  Location                ->  5%")
+        output_lines.append("")
+
+    # Overall summary only in full report
+    if filter_type == "all" and "jd_fit_summary" in json_response:
+        output_lines.append("OVERALL SUMMARY")
         output_lines.append("-" * 80)
         output_lines.append(json_response["jd_fit_summary"])
         output_lines.append("")
-    
-    # Detailed candidate analysis (sorted by ranking)
-    output_lines.append("👥 DETAILED CANDIDATE ANALYSIS")
+
+    output_lines.append("DETAILED CANDIDATE ANALYSIS")
     output_lines.append("=" * 80)
     output_lines.append("")
-    
-    candidates = json_response.get("candidates", [])
+
+    all_candidates = json_response.get("candidates", [])
     ranking = json_response.get("ranking", [])
-    
-    # Create a map of ID to candidate for easy lookup
-    candidate_map = {c.get("id"): c for c in candidates}
-    
-    # Iterate through ranking to maintain order (best to worst)
-    ranked_candidates = []
-    for cid in ranking:
-        if cid in candidate_map:
-            ranked_candidates.append(candidate_map[cid])
-    
-    # Add any candidates not in ranking (shouldn't happen but safe fallback)
-    for candidate in candidates:
-        if candidate not in ranked_candidates:
-            ranked_candidates.append(candidate)
-    
-    # Display each candidate (no R-001 IDs shown)
-    for rank_num, candidate in enumerate(ranked_candidates, 1):
+
+    candidate_map = {c.get("id"): c for c in all_candidates}
+    ranked_candidates = [candidate_map[cid] for cid in ranking if cid in candidate_map]
+    for c in all_candidates:
+        if c not in ranked_candidates:
+            ranked_candidates.append(c)
+
+    # Assign overall rank numbers before filtering
+    for i, c in enumerate(ranked_candidates):
+        c["_rank_txt"] = i + 1
+
+    if filter_type == "suitable":
+        ranked_candidates = [c for c in ranked_candidates if c.get("is_suitable", False)]
+    elif filter_type == "not_suitable":
+        ranked_candidates = [c for c in ranked_candidates if not c.get("is_suitable", False)]
+
+    for candidate in ranked_candidates:
+        rank_num = candidate.get("_rank_txt", "?")
         name = candidate.get("name", "Name not found in resume")
         score = candidate.get("score_percentage", 0)
         is_suitable = candidate.get("is_suitable", False)
-        
-        # Candidate header (no ID shown to user)
-        output_lines.append(f"🏆 Rank #{rank_num}")
-        output_lines.append(f"   Candidate: {name}")
-        output_lines.append(f"   Match Score: {score}%")
-        output_lines.append(f"   Status: {'✅ SUITABLE FOR ROLE' if is_suitable else '❌ NOT SUITABLE FOR ROLE'}")
+
+        output_lines.append(f"Rank #{rank_num}")
+        output_lines.append(f"  Candidate   : {name}")
+        output_lines.append(f"  Match Score : {score}%")
+        output_lines.append(f"  Status      : {'SUITABLE FOR ROLE' if is_suitable else 'NOT SUITABLE FOR ROLE'}")
         output_lines.append("")
-        
-        # Strengths
+
         strengths = candidate.get("strengths", [])
         if strengths:
-            output_lines.append("   💪 Key Strengths:")
-            for strength in strengths:
-                output_lines.append(f"      • {strength}")
+            output_lines.append("  Key Strengths:")
+            for s in strengths:
+                output_lines.append(f"    * {s}")
             output_lines.append("")
-        
-        # Gaps
+
         gaps = candidate.get("gaps", [])
         if gaps:
-            output_lines.append("   ⚠️  Areas of Concern:")
-            for gap in gaps:
-                output_lines.append(f"      • {gap}")
+            output_lines.append("  Areas of Concern:")
+            for g in gaps:
+                output_lines.append(f"    * {g}")
             output_lines.append("")
-        
-        # Evidence
+
         evidence = candidate.get("evidence", [])
         if evidence:
-            output_lines.append("   📌 Supporting Evidence:")
-            for ev in evidence[:3]:  # Show top 3 evidence points
-                output_lines.append(f"      • \"{ev}\"")
+            output_lines.append("  Supporting Evidence:")
+            for ev in evidence[:3]:
+                output_lines.append(f"    * \"{ev}\"")
             output_lines.append("")
-        
+
         output_lines.append("-" * 80)
         output_lines.append("")
-    
+
     output_lines.append("=" * 80)
     output_lines.append("END OF REPORT")
     output_lines.append("=" * 80)
-    
+
     return "\n".join(output_lines)
-
-
-# Backward compatibility alias
-get_gemini_response = get_ai_response

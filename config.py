@@ -6,24 +6,7 @@ Centralized environment configuration for the application.
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
-
-
-# ============================================================================
-# AI PROVIDER CONFIGURATION
-# ============================================================================
-
-# AI Provider: 'groq' or 'gemini'
-AI_PROVIDER = os.getenv("AI_PROVIDER", "groq").lower()
-
-
-# ============================================================================
-# GROQ CONFIGURATION
-# ============================================================================
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
 
 # ============================================================================
@@ -31,13 +14,12 @@ GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 # ============================================================================
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-pro")
+GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 
 # ============================================================================
-# RESUME LIMITS (based on model context)
+# RESUME LIMITS
 # ============================================================================
 
-# For openai/gpt-oss-20b (8k context): max 2-3 resumes safely
-# For larger context models (32k+): increase this limit accordingly
-MAX_RESUMES = 3
+# Gemini 2.5 Flash has a 1M token context window — 20 resumes is a safe limit.
+MAX_RESUMES = int(os.getenv("MAX_RESUMES", "20"))
