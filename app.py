@@ -249,6 +249,81 @@ def render_brand_header():
         unsafe_allow_html=True
     )
 
+def render_progress_stepper(has_files, has_jd):
+    # Step 1: Upload Resume Logic
+    if has_files:
+        step1_icon = '<i class="bi bi-check-circle-fill" style="color: #22c55e; font-size: 24px;"></i>'
+        step1_color = '#111827' # Dark text
+    else:
+        step1_icon = '<i class="bi bi-record-circle" style="color: #2563eb; font-size: 24px;"></i>'
+        step1_color = '#111827'
+        
+    # Step 2: Add Description Logic (Python Server-Side)
+    if has_jd:
+        step2_icon = '<i class="bi bi-check-circle-fill" style="color: #22c55e; font-size: 24px;"></i>'
+        step2_color = '#111827'
+    elif has_files:
+        step2_icon = '<i class="bi bi-record-circle" style="color: #2563eb; font-size: 24px;"></i>'
+        step2_color = '#111827'
+    else:
+        step2_icon = '<i class="bi bi-circle" style="color: #9ca3af; font-size: 24px;"></i>'
+        step2_color = '#6b7280' # Grey text
+        
+    # 1. Render the HTML (INDENTATION REMOVED TO PREVENT MARKDOWN CODE BLOCK BUG)
+    html = f"""
+<div style="display: flex; align-items: center; justify-content: center; margin: 25px 0 35px 0; font-family: sans-serif;">
+<div style="display: flex; align-items: center; gap: 10px;">
+{step1_icon}
+<span style="color: {step1_color}; font-weight: 500; font-size: 16px;">Upload Resume</span>
+</div>
+<div style="width: 100px; height: 1px; background-color: #d1d5db; margin: 0 20px;"></div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<span id="step2-dynamic-icon">{step2_icon}</span>
+<span id="step2-dynamic-text" style="color: {step2_color}; font-weight: 500; font-size: 16px;">Add Description</span>
+</div>
+</div>
+"""
+    st.markdown(html, unsafe_allow_html=True)
+
+    # 2. Inject real-time JavaScript Keystroke Tracker
+    js_code = f"""
+    <script>
+    const parentDoc = window.parent.document;
+    
+    // Wait for Streamlit to render the text area
+    setTimeout(() => {{
+        const textAreas = parentDoc.querySelectorAll('textarea');
+        let jdBox = null;
+        textAreas.forEach(ta => {{
+            // Find your specific text area using the placeholder text
+            if(ta.placeholder && ta.placeholder.includes("Job Description")) {{
+                jdBox = ta;
+            }}
+        }});
+        
+        const step2Icon = parentDoc.getElementById("step2-dynamic-icon");
+        const step2Text = parentDoc.getElementById("step2-dynamic-text");
+        
+        // Only attach the live-typing tracker if files have actually been uploaded
+        if(jdBox && step2Icon && {str(has_files).lower()}) {{
+            jdBox.addEventListener('input', function() {{
+                if(this.value.trim().length > 0) {{
+                    // Turn green instantly when they type
+                    step2Icon.innerHTML = '<i class="bi bi-check-circle-fill" style="color: #22c55e; font-size: 24px;"></i>';
+                    step2Text.style.color = '#111827';
+                }} else {{
+                    // Turn back to active blue if they delete the text
+                    step2Icon.innerHTML = '<i class="bi bi-record-circle" style="color: #2563eb; font-size: 24px;"></i>';
+                    step2Text.style.color = '#111827';
+                }}
+            }});
+        }}
+    }}, 500); 
+    </script>
+    """
+    components.html(js_code, height=0, width=0)
+
+
 
 # JD INPUT WITH BUTTON INSIDE CARD
 def render_jd_input():
@@ -490,12 +565,15 @@ render_top_header()
 with st.container():
     
     render_brand_header()
-    jd_text, analyze_clicked = render_jd_input()
+    #jd_text, analyze_clicked = render_jd_input()
 
     #progress_placeholder = st.empty()
 
     has_files = len(st.session_state.uploaded_files) > 0
     has_jd = bool(st.session_state.jd_input.strip())
+
+    render_progress_stepper(has_files, has_jd)
+    jd_text, analyze_clicked = render_jd_input()
    
     is_processed = st.session_state.process_result is not None
 
