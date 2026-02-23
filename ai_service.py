@@ -2,13 +2,13 @@
 AI Service Module
 Handles AI-related business logic:
 - Prompt composition (three-layer design)
-- Gemini 2.5 Flash API calls
+- AI API calls (Gemini or Groq)
 """
 
 import json
 import re
 from typing import Dict, Any
-from config import GEMINI_API_KEY, GEMINI_MODEL
+from config import AI_PROVIDER, GEMINI_API_KEY, GEMINI_MODEL, GROQ_API_KEY, GROQ_MODEL
 
 
 # ============================================================================
@@ -131,7 +131,7 @@ CRITICAL INSTRUCTION FOR "jd_fit_summary":
 
 
 # ============================================================================
-# GEMINI API CLIENT
+# AI API CLIENTS
 # ============================================================================
 
 def _call_gemini_api(prompt: str) -> Dict[str, Any]:
@@ -163,9 +163,41 @@ def _call_gemini_api(prompt: str) -> Dict[str, Any]:
         raise Exception(f"Gemini API error: {str(e)}")
 
 
-def get_gemini_response(prompt: str, parsed_resumes: Dict[str, str]) -> Dict[str, Any]:
+def _call_groq_api(prompt: str) -> Dict[str, Any]:
+    """Call Groq API and return parsed JSON response."""
+    try:
+        from groq import Groq
+
+        client = Groq(api_key=GROQ_API_KEY)
+
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.3,
+            response_format={"type": "json_object"}
+        )
+
+        response_text = response.choices[0].message.content.strip()
+
+        # Strip markdown code fences if the model wraps output in them
+        if response_text.startswith("```"):
+            response_text = re.sub(r"^```(?:json)?\s*", "", response_text)
+            response_text = re.sub(r"\s*```$", "", response_text).strip()
+
+        return json.loads(response_text)
+
+    except Exception as e:
+        raise Exception(f"Groq API error: {str(e)}")
+
+
+def get_ai_response(prompt: str, parsed_resumes: Dict[str, str]) -> Dict[str, Any]:
     """
-    Send the composed prompt to Gemini 2.5 Flash and return the structured response.
+    Send the composed prompt to the configured AI provider and return the structured response.
 
     Args:
         prompt: The structured prompt to send
@@ -175,15 +207,39 @@ def get_gemini_response(prompt: str, parsed_resumes: Dict[str, str]) -> Dict[str
         Dict containing structured JSON response with candidates, ranking, etc.
 
     Raises:
-        ValueError: If GEMINI_API_KEY is not set
+        ValueError: If API key is not configured
         Exception: If the API call fails
     """
-    if not GEMINI_API_KEY:
+    if AI_PROVIDER == "groq":
+        if not GROQ_API_KEY:
+            raise ValueError(
+                "GROQ_API_KEY is not set. Add it to your .env file.\n"
+                "Get your key at: https://console.groq.com/keys"
+            )
+        return _call_groq_api(prompt)
+    
+    elif AI_PROVIDER == "gemini":
+        if not GEMINI_API_KEY:
+            raise ValueError(
+                "GEMINI_API_KEY is not set. Add it to your .env file.\n"
+                "Get your key at: https://aistudio.google.com/app/apikey"
+            )
+        return _call_gemini_api(prompt)
+    
+    else:
         raise ValueError(
-            "GEMINI_API_KEY is not set. Add it to your .env file.\n"
-            "Get your key at: https://aistudio.google.com/app/apikey"
+            f"Invalid AI_PROVIDER: {AI_PROVIDER}. Must be 'gemini' or 'groq'.\n"
+            "Update AI_PROVIDER in your .env file."
         )
-    return _call_gemini_api(prompt)
+
+
+# Legacy function name for backward compatibility
+def get_gemini_response(prompt: str, parsed_resumes: Dict[str, str]) -> Dict[str, Any]:
+    """
+    Legacy function name - routes to get_ai_response.
+    Kept for backward compatibility with existing code.
+    """
+    return get_ai_response(prompt, parsed_resumes)
 
 
 # ============================================================================

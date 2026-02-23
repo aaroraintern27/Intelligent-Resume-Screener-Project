@@ -2,7 +2,10 @@
 streamlit>=1.28.0
 pymupdf>=1.23.0
 python-dotenv>=1.0.0
-google-generativeai>=0.3.0
+
+# AI Providers
+google-generativeai>=0.3.0  # For Gemini
+groq>=0.4.0                 # For Groq
 
 # Required for PDF processing
 Pillow>=10.0.0
